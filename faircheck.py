@@ -4,11 +4,10 @@ import requests
 import sys
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import List, Dict
 
 
-class Bcolors(Enum):
+class BCOLORS:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     CYAN = '\033[96m'
@@ -43,7 +42,7 @@ def __launch_test(resources_list: List[str], test_list: List[str]) -> Dict[str, 
         for test in test_list:
             results: List[Dict] = __execute_request(resource, test)
             comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
-            result: int = results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value']
+            result: int = int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value'])
             results_dict[resource].append(TestInfo(test, bool(result), comment_value))
 
     return results_dict
@@ -51,19 +50,19 @@ def __launch_test(resources_list: List[str], test_list: List[str]) -> Dict[str, 
 
 def __print_results(results: Dict[str, List[TestInfo]]) -> None:
     for resource, tests in results.items():
-        print(f"{Bcolors.HEADER} Testing resource: %r{Bcolors.END}" % resource)
+        print(f"{BCOLORS.HEADER} Testing resource: %r{BCOLORS.END}" % resource)
         success_counter: int = 0
         for test in tests:
-            print(f"\t{Bcolors.BLUE} Test: %r{Bcolors.END}" % test.test)
+            print(f"\t{BCOLORS.BLUE} Test: %r{BCOLORS.END}" % test.test)
             if test.is_success:
-                print(f"\t{Bcolors.GREEN} SUCCESS: %r{Bcolors.END}" % test.comment)
+                print(f"\t{BCOLORS.GREEN} SUCCESS: %r{BCOLORS.END}" % test.comment)
                 success_counter = success_counter + 1
             else:
-                print(f"\t{Bcolors.FAIL} FAILED!: %r{Bcolors.END}" % test.comment)
-        print(f"\t{Bcolors.CYAN} Passed: %s/%s {Bcolors.END}" % (success_counter, len(tests)))
+                print(f"\t{BCOLORS.FAIL} FAILED!: %r{BCOLORS.END}" % test.comment)
+        print(f"\t{BCOLORS.CYAN} Passed: %s/%s {BCOLORS.END}" % (success_counter, len(tests)))
 
 
-def __export_csv(path: str, test_list: List[str],  results: Dict[str, List[TestInfo]]) -> None:
+def __export_csv(path: str, test_list: List[str], results: Dict[str, List[TestInfo]]) -> None:
     with open(path, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['resource'] + test_list)
@@ -103,7 +102,7 @@ def main():
         __print_results(results_dict)
 
     if args.export is not None:
-        __export_csv(args.export, test_list,  results_dict)
+        __export_csv(args.export, test_list, results_dict)
 
 
 if __name__ == '__main__':
