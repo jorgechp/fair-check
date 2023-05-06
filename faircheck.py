@@ -55,10 +55,10 @@ def __print_results(results: Dict[str, List[TestInfo]]) -> None:
         for test in tests:
             print(f"\t{BCOLORS.BLUE} Test: %r{BCOLORS.END}" % test.test)
             if test.is_success:
-                print(f"\t{BCOLORS.GREEN} SUCCESS: %r{BCOLORS.END}" % test.comment)
+                print(f"\t\t{BCOLORS.GREEN} SUCCESS: %r{BCOLORS.END}" % test.comment)
                 success_counter = success_counter + 1
             else:
-                print(f"\t{BCOLORS.FAIL} FAILED!: %r{BCOLORS.END}" % test.comment)
+                print(f"\t\t{BCOLORS.FAIL} FAILED!: %r{BCOLORS.END}" % test.comment)
         print(f"\t{BCOLORS.CYAN} Passed: %s/%s {BCOLORS.END}" % (success_counter, len(tests)))
 
 
@@ -73,7 +73,7 @@ def __export_csv(path: str, test_list: List[str], results: Dict[str, List[TestIn
 
 def main():
     parser = argparse.ArgumentParser(
-        prog='faircheck',
+        prog='faircheck.py',
         description="Check the degree of compliance with FAIR principles of a resource.",
         epilog='Jorge Chamorro Padial - GNU GPLv3')
     parser.add_argument('resources_list', nargs='*', default=[])
