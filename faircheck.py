@@ -1,8 +1,27 @@
 import argparse
-import os.path
+import csv
 import requests
 import sys
-from typing import List
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Dict
+
+
+class Bcolors(Enum):
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    FAIL = '\033[91m'
+    END = '\033[0m'
+
+
+@dataclass
+class TestInfo:
+    test: str
+    is_success: bool
+    comment: str
 
 
 def __extract_from_file(path: str) -> List[str]:
@@ -10,18 +29,47 @@ def __extract_from_file(path: str) -> List[str]:
         return file.read().splitlines()
 
 
-def __execute_request(subject: str, test_url: str) -> str:
+def __execute_request(subject: str, test_url: str) -> List[Dict]:
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
     data = '{"subject": "%s"}' % subject
 
-    return requests.post(test_url, headers=headers, data=data).text
+    return requests.post(test_url, headers=headers, data=data).json()
 
 
-def __launch_test(resources_list: List[str], test_list: List[str]) -> None:
+def __launch_test(resources_list: List[str], test_list: List[str]) -> Dict[str, List[TestInfo]]:
+    results_dict: Dict[str, List[TestInfo]] = dict()
     for resource in resources_list:
+        results_dict[resource] = []
         for test in test_list:
-            results: str = __execute_request(resource, test)
-            print(results)
+            results: List[Dict] = __execute_request(resource, test)
+            comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
+            result: int = results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value']
+            results_dict[resource].append(TestInfo(test, bool(result), comment_value))
+
+    return results_dict
+
+
+def __print_results(results: Dict[str, List[TestInfo]]) -> None:
+    for resource, tests in results.items():
+        print(f"{Bcolors.HEADER} Testing resource: %r{Bcolors.END}" % resource)
+        success_counter: int = 0
+        for test in tests:
+            print(f"\t{Bcolors.BLUE} Test: %r{Bcolors.END}" % test.test)
+            if test.is_success:
+                print(f"\t{Bcolors.GREEN} SUCCESS: %r{Bcolors.END}" % test.comment)
+                success_counter = success_counter + 1
+            else:
+                print(f"\t{Bcolors.FAIL} FAILED!: %r{Bcolors.END}" % test.comment)
+        print(f"\t{Bcolors.CYAN} Passed: %s/%s {Bcolors.END}" % (success_counter, len(tests)))
+
+
+def __export_csv(path: str, test_list: List[str],  results: Dict[str, List[TestInfo]]) -> None:
+    with open(path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['resource'] + test_list)
+        for resource, tests in results.items():
+            results_line = [resource] + [str(int(x.is_success)) for x in tests]
+            writer.writerow(results_line)
 
 
 def main():
@@ -31,8 +79,10 @@ def main():
         epilog='Jorge Chamorro Padial - GNU GPLv3')
     parser.add_argument('resources_list', nargs='*', default=[])
     parser.add_argument('tests_list', nargs='*', default=[])
-    parser.add_argument('-r', '--resources', help='Path to a resource file')
-    parser.add_argument('-t', '--tests', help='Path to a test file')
+    parser.add_argument('-e', '--export', help="Specify a path to export the results as a csv file.")
+    parser.add_argument('-nv', '--no-verbosity', help="Don't display the test results on the default output.")
+    parser.add_argument('-r', '--resources', help="Path to a resource file")
+    parser.add_argument('-t', '--tests', help="Path to a test file")
 
     args = parser.parse_args()
     if len(sys.argv) < 2:
@@ -48,8 +98,12 @@ def main():
     else:
         test_list: List[str] = __extract_from_file("config/tests")
 
-    __launch_test(resource_list, test_list)
+    results_dict: Dict[str, List[TestInfo]] = __launch_test(resource_list, test_list)
+    if args.no_verbosity is None:
+        __print_results(results_dict)
 
+    if args.export is not None:
+        __export_csv(args.export, test_list,  results_dict)
 
 
 if __name__ == '__main__':
