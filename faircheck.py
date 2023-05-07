@@ -1,10 +1,14 @@
 import argparse
 import csv
+import logging
+
 import requests
 import sys
 
 from dataclasses import dataclass
 from typing import List, Dict
+
+from requests import Response
 
 
 class BCOLORS:
@@ -28,22 +32,38 @@ def __extract_from_file(path: str) -> List[str]:
         return file.read().splitlines()
 
 
-def __execute_request(subject: str, test_url: str) -> List[Dict]:
+def __execute_request(subject: str, test_url: str) -> List[Dict] or None:
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
     data = '{"subject": "%s"}' % subject
 
-    return requests.post(test_url, headers=headers, data=data).json()
+    response: Response = requests.post(test_url, headers=headers, data=data)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        logging.error("Error calling interface: {}. Status code: {}. Reason: {}".format(test_url,
+                                                                                        response.status_code,
+                                                                                        response.reason))
+        return None
 
 
-def __launch_test(resources_list: List[str], test_list: List[str]) -> Dict[str, List[TestInfo]]:
+def __launch_test(resources_list: List[str], test_list: List[str] or List[List[str]]) -> Dict[str, List[TestInfo]]:
     results_dict: Dict[str, List[TestInfo]] = dict()
     for resource in resources_list:
         results_dict[resource] = []
-        for test in test_list:
-            results: List[Dict] = __execute_request(resource, test)
-            comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
-            result: int = int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value'])
-            results_dict[resource].append(TestInfo(test, bool(result), comment_value))
+        for test_to_execute in test_list:
+            test_to_execute_splitted: List[str] = test_to_execute.split(',')
+            if len(test_to_execute_splitted) == 2:
+                test_name: str = test_to_execute_splitted[0]
+                test_interface: str = test_to_execute_splitted[1]
+            else:
+                test_name: str = test_to_execute[0]
+                test_interface: str = test_to_execute[0]
+            results: List[Dict] or None = __execute_request(resource, test_interface)
+            if results is not None:
+                comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
+                result: int = int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value'])
+                results_dict[resource].append(TestInfo(test_name, bool(result), comment_value))
 
     return results_dict
 
@@ -97,12 +117,15 @@ def main():
     else:
         test_list: List[str] = __extract_from_file("config/tests")
 
+    print("Executing tests")
     results_dict: Dict[str, List[TestInfo]] = __launch_test(resource_list, test_list)
+    print("Generating output file")
     if args.no_verbosity is None:
         __print_results(results_dict)
 
     if args.export is not None:
         __export_csv(args.export, test_list, results_dict)
+    print("Done")
 
 
 if __name__ == '__main__':
