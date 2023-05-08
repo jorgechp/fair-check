@@ -7,6 +7,7 @@ import sys
 
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Set
+from collections import defaultdict
 
 from requests import Response
 
@@ -41,32 +42,32 @@ def __execute_request(subject: str, test_url: str) -> List[Dict] or None:
     if response.status_code == 200:
         return response.json()
     else:
-        logging.error("Error calling interface: {}. Status code: {}. Reason: {}".format(test_url,
-                                                                                        response.status_code,
-                                                                                        response.reason))
+        logging.error(f"Error calling interface: {test_url}. "
+                      f"Status code: {response.status_code}. "
+                      f"Reason: {response.reason}"
+                      )
         return None
 
 
 def __launch_test(resources_list: List[str], name_list: List[str], interface_list: List[str]) \
         -> Tuple[Dict[str, Dict[str, TestInfo]], List[str], List[str]]:
 
-    results_dict: Dict[str, Dict[str, TestInfo]] = dict()
+    results_dict: Dict[str, Dict[str, TestInfo]] = defaultdict(dict)
     temp_name_set: Set[str] = set()
     temp_interface_set: Set[str] = set()
 
     for resource in resources_list:
-        results_dict[resource] = dict()
 
         for test_name, test_interface in zip(name_list, interface_list):
             results: List[Dict] or None = __execute_request(resource, test_interface)
             if results is not None:
                 comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
-                result: int = int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value'])
-                results_dict[resource][test_name] = TestInfo(test_name, bool(result), comment_value)
+                result: bool = bool(int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value']))
+                results_dict[resource][test_name] = TestInfo(test_name, result, comment_value)
                 temp_name_set.add(test_name)
                 temp_interface_set.add(test_interface)
             else:
-                logging.info("Removing indicator {} from list.".format(test_name))
+                logging.info(f"Removing indicator {test_name} from list.")
 
     return results_dict, list(temp_name_set), list(temp_interface_set)
 
