@@ -6,7 +6,7 @@ import requests
 import sys
 
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Tuple, Set
 
 from requests import Response
 
@@ -47,32 +47,36 @@ def __execute_request(subject: str, test_url: str) -> List[Dict] or None:
         return None
 
 
-def __launch_test(resources_list: List[str], test_list: List[str] or List[List[str]]) -> Dict[str, List[TestInfo]]:
-    results_dict: Dict[str, List[TestInfo]] = dict()
+def __launch_test(resources_list: List[str], name_list: List[str], interface_list: List[str]) \
+        -> Tuple[Dict[str, Dict[str, TestInfo]], List[str], List[str]]:
+
+    results_dict: Dict[str, Dict[str, TestInfo]] = dict()
+    temp_name_set: Set[str] = set()
+    temp_interface_set: Set[str] = set()
+
     for resource in resources_list:
-        results_dict[resource] = []
-        for test_to_execute in test_list:
-            test_to_execute_splitted: List[str] = test_to_execute.split(',')
-            if len(test_to_execute_splitted) == 2:
-                test_name: str = test_to_execute_splitted[0]
-                test_interface: str = test_to_execute_splitted[1]
-            else:
-                test_name: str = test_to_execute[0]
-                test_interface: str = test_to_execute[0]
+        results_dict[resource] = dict()
+
+        for test_name, test_interface in zip(name_list, interface_list):
             results: List[Dict] or None = __execute_request(resource, test_interface)
             if results is not None:
                 comment_value: str = results[0]['http://schema.org/comment'][0]['@value']
                 result: int = int(results[0]['http://semanticscience.org/resource/SIO_000300'][0]['@value'])
-                results_dict[resource].append(TestInfo(test_name, bool(result), comment_value))
+                results_dict[resource][test_name] = TestInfo(test_name, bool(result), comment_value)
+                temp_name_set.add(test_name)
+                temp_interface_set.add(test_interface)
+            else:
+                logging.info("Removing indicator {} from list.".format(test_name))
 
-    return results_dict
+    return results_dict, list(temp_name_set), list(temp_interface_set)
 
 
-def __print_results(results: Dict[str, List[TestInfo]]) -> None:
+def __print_results(results: Dict[str, Dict[str, TestInfo]], name_list: List[str]) -> None:
     for resource, tests in results.items():
         print(f"{BCOLORS.HEADER} Testing resource: %r{BCOLORS.END}" % resource)
         success_counter: int = 0
-        for test in tests:
+        for name in name_list:
+            test = results[resource][name]
             print(f"\t{BCOLORS.BLUE} Test: %r{BCOLORS.END}" % test.test)
             if test.is_success:
                 print(f"\t\t{BCOLORS.GREEN} SUCCESS: %r{BCOLORS.END}" % test.comment)
@@ -82,13 +86,34 @@ def __print_results(results: Dict[str, List[TestInfo]]) -> None:
         print(f"\t{BCOLORS.CYAN} Passed: %s/%s {BCOLORS.END}" % (success_counter, len(tests)))
 
 
-def __export_csv(path: str, test_list: List[str], results: Dict[str, List[TestInfo]]) -> None:
+def __export_csv(path: str,
+                 results: Dict[str, Dict[str, TestInfo]],
+                 name_list: List[str]) -> None:
+
     with open(path, 'w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['resource'] + test_list)
+        writer.writerow(['resource'] + name_list)
+
         for resource, tests in results.items():
-            results_line = [resource] + [str(int(x.is_success)) for x in tests]
+            results_line = [resource]
+
+            for name in name_list:
+                results_line.append(results[resource][name].is_success)
             writer.writerow(results_line)
+
+
+def __process_tests_list(test_list: List[str]) -> Tuple[List[str], List[str]]:
+    name_list: List[str] = []
+    interface_list: List[str] = []
+    if len(test_list) > 0:
+        first_string_len: int = len(test_list[0].split(','))
+        if first_string_len == 1:
+            name_list = test_list
+            interface_list = test_list
+        else:
+            name_list, interface_list = zip(*[x.split(',') for x in test_list])
+
+    return list(name_list), list(interface_list)
 
 
 def main():
@@ -117,14 +142,17 @@ def main():
     else:
         test_list: List[str] = __extract_from_file("config/tests")
 
+    name_list, interface_list = __process_tests_list(test_list)
+
     print("Executing tests")
-    results_dict: Dict[str, List[TestInfo]] = __launch_test(resource_list, test_list)
+    results_dict, name_list, interface_list = __launch_test(resource_list, name_list, interface_list)
+
     print("Generating output file")
     if args.no_verbosity is None:
-        __print_results(results_dict)
+        __print_results(results_dict, name_list)
 
     if args.export is not None:
-        __export_csv(args.export, test_list, results_dict)
+        __export_csv(args.export, results_dict, name_list)
     print("Done")
 
 

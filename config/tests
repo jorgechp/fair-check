@@ -1,11 +1,4 @@
 https://purl.org/fair-metrics/Gen2_FM_F1A,https://w3id.org/FAIR_Tests/tests/gen2_unique_identifier
-https://purl.org/fair-metrics/Gen2_FM_F1B,https://w3id.org/FAIR_Tests/tests/gen2_metadata_identifier_persistence
-https://purl.org/fair-metrics/Gen2_FM_F1B,https://w3id.org/FAIR_Tests/tests/gen2_data_identifier_persistence
-https://purl.org/fair-metrics/Gen2_FM_F2A,https://w3id.org/FAIR_Tests/tests/gen2_structured_metadata
-https://purl.org/fair-metrics/Gen2_FM_F2B,https://w3id.org/FAIR_Tests/tests/gen2_grounded_metadata
-https://purl.org/fair-metrics/Gen2_FM_F3,https://w3id.org/FAIR_Tests/tests/gen2_data_identifier_in_metadata
-https://purl.org/fair-metrics/Gen2_FM_F3,https://w3id.org/FAIR_Tests/tests/gen2_metadata_identifier_in_metadata
-https://purl.org/fair-metrics/Gen2_FM_F4,https://w3id.org/FAIR_Tests/tests/gen2_searchable
 https://w3id.org/rd-fairmetrics/RD-F4,https://w3id.org/rd-fairness-tests/RD-F4
 https://w3id.org/rd-fairmetrics/RD-F4,https://w3id.org/rd-fairness-tests/tests/RD-F4
 https://metrics.api.fair-enough.semanticscience.org/tests/f4-searchable,https://metrics.api.fair-enough.semanticscience.org/tests/f4-searchable
