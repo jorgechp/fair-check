@@ -122,8 +122,8 @@ def main():
         prog='faircheck.py',
         description="Check the degree of compliance with FAIR principles of a resource.",
         epilog='Jorge Chamorro Padial - GNU GPLv3')
-    parser.add_argument('resources_list', nargs='*', default=[])
-    parser.add_argument('tests_list', nargs='*', default=[])
+    parser.add_argument('resources_list', nargs='?', default=[])
+    parser.add_argument('tests_list', nargs='?', default=[])
     parser.add_argument('-e', '--export', help="Specify a path to export the results as a csv file.")
     parser.add_argument('-nv', '--no-verbosity', help="Don't display the test results on the default output.")
     parser.add_argument('-r', '--resources', help="Path to a resource file")
@@ -134,11 +134,11 @@ def main():
         parser.print_help()
         exit(0)
 
-    resource_list: List[str] = args.resources_list if len(args.resources_list) > 0 \
+    resource_list: List[str] = args.resources_list.split(',') if len(args.resources_list) > 0 \
         else __extract_from_file(args.resources)
 
     if len(args.tests_list) > 0 or args.tests is not None:
-        test_list: List[str] = args.tests_list if len(args.tests_list) > 0 \
+        test_list: List[str] = args.tests_list.split(',')  if len(args.tests_list) > 0 \
             else __extract_from_file(args.tests)
     else:
         test_list: List[str] = __extract_from_file("config/tests")
@@ -148,8 +148,8 @@ def main():
     print("Executing tests")
     results_dict, name_list, interface_list = __launch_test(resource_list, name_list, interface_list)
 
-    print("Generating output file")
     if args.no_verbosity is None:
+        print("Generating output file")
         __print_results(results_dict, name_list)
 
     if args.export is not None:
