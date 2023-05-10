@@ -149,10 +149,10 @@ def main():
     results_dict, name_list, interface_list = __launch_test(resource_list, name_list, interface_list)
 
     if args.no_verbosity is None:
-        print("Generating output file")
         __print_results(results_dict, name_list)
 
     if args.export is not None:
+        print("Generating output file")
         __export_csv(args.export, results_dict, name_list)
     print("Done")
 
