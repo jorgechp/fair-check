@@ -85,7 +85,7 @@ But you can also use different parameters:
 Remember that if no interfaces are provided, Fair-check will use all the interfaces listed on
 config/tests file.
 
-## Resources and test files
+## Resources and interfaces files
 
 You can save all the tests and resources into files. The resources file requires to input
 one resource per line. 
