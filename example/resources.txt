@@ -1,0 +1,4 @@
+10.5281/zenodo.7886834
+10.5281/zenodo.7883144
+10.5281/zenodo.7844986
+https://github.com/jorgechp/fair-check
